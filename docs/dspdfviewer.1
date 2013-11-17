@@ -57,64 +57,53 @@ start the clock, but still display the title slide, just press "previous"
 This program follows the usual GNU command line syntax, with long
 options starting with two dashes ('-').
 A summary of options is included below.
-
-.TP
-.B \-h, \-\-help
-Show summary of options.
-
 .TP
 .B \-f, \-\-full-page
 Use the presentation program with a standard PDF, that is display the full page
 on the primary AND secondary monitor. The secondary screen still contains timers
 and thumbnails to help you with your presentation, unless you disable them using
 the options below.
-
 .TP
-.B \-u, \-\-use-second-screen <bool>
+.B \-1, \-\-single-screen
 Controls whether the program actually works as a dual-screen viewer.
 If you only have one screen, but still want to use the cache features, you can set
 this option to false. If the window ends up on the wrong display, you can still use
 the switch command (see below).
 
-What comes out on the primary screen depends on whether you use the -f Option: -u0 -f
-results in a simple full-screen PDF viewer, while -u0 without -f still splits the page
+What comes out on the primary screen depends on whether you use the -f Option: -1 -f
+results in a simple full-screen PDF viewer, while -1 without -f still splits the page
 in half and outputs only the left frame.
-
 .TP
-.B \-\-prerender-previous-pages <n>
+.B \-P, \-\-previous \fIN\fP
 When jumping to slide m, also pre-render the slides (m-n)..(m-1) (default 3)
 
 Note: If you set this to zero, you will not get a thumbnail for the previous page
 rendered before you have visited it.
-
 .TP
-.B \-\-prerender-next-pages <n>
+.B \-N, \-\-next \fIN\fP
 When jumping to slide m, also pre-render the slides (m+1)..(m+n) (default 10)
 
 Note: If you set this to zero, you will not get a thumbnail for the next page
 rendered before you have visited it.
-
 .TP
-.B \-a <bool>, \-\-presenter-area <bool>
-Show (true, 1) or hide (false, 0) the presenter's area on the second screen.
-If this is set to zero, the following options will have no effect.
-
+.B \-a, \-\-no-presenter-area
+Hide the presenter's area on the screen. If this is set to zero, the following
+options will have no effect.
 .TP
-.B \-t <bool>, \-\-thumbnails <bool>
-Show (true, 1) or hide (false, 0) the thumbnails on the second screen.
-
+.B \-t, \-\-no-thumbnails
+Hide thumbnails on the second screen.
 .TP
-.B \-w <bool>, \-\-wall\-clock <bool>
-Show (true, 1) or hide (false, 0) the wall clock on the second screen.
-
+.B \-w, \-\-no-wall\-clock
+Hide the wall clock on the second screen.
 .TP
-.B \-p <bool>, \-\-presentation\-clock <bool>
-Show (true, 1) or hide (false, 0) the presentation clock on the second screen.
-
+.B \-p, \-\-no-presentation\-clock
+Hide the presentation clock on the second screen.
 .TP
-.B \-s <bool>, \-\-slide\-clock <bool>
-Show (true, 1) or hide (false, 0) the slide clock on the second screen.
-
+.B \-s, \-\-no-slide\-clock
+Hide the slide clock on the second screen.
+.TP
+.B \-h, \-\-help
+Show summary of options.
 .SH CONTROLS
 You can use the following controls while
 .B dspdfviewer
@@ -143,7 +132,6 @@ Quit viewer
 Switch primary and secondary screens
 (Use this if the audience sees your 'note' side instead of the actual
 presentation)
-
 .SH SEE ALSO
 .BR /usr/share/doc/latex-beamer/beameruserguide.pdf.gz
 from the 
