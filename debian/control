@@ -5,7 +5,6 @@ Maintainer: Danny Edel <mail@danny-edel.de>
 Build-Depends: g++ (>= 4:4.6),
  debhelper (>= 7.3.0), cmake,
  libpoppler-qt4-dev,
- libboost-program-options-dev,
  hardening-wrapper,
  lsb-release
 # The project needs a c++11 compiler.
@@ -24,9 +23,6 @@ Build-Depends: g++ (>= 4:4.6),
 #
 # - libpoppler-qt4-dev
 # the poppler-library for PDF decoding
-#
-# - libboost-program-options-dev
-# the boost program options to parse command line parameters
 #
 # - hardening-wrapper
 # And the hardening-wrapper because lintian told me to make the build
