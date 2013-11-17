@@ -20,130 +20,135 @@
 
 #include "runtimeconfiguration.h"
 
-#include <boost/program_options.hpp>
-#include <iostream>
+#include <unistd.h>
+#include <getopt.h>
+#include <stdio.h>
 
 #ifndef DSPDFVIEWER_VERSION
 #warning DSPDFVIEWER_VERSION was not set by the build system!
 #define DSPDFVIEWER_VERSION "UNKNOWN"
 #endif
 
-using namespace std;
-using namespace boost::program_options;
+static const char* OPTSTRING = "hf1P:N:atwps";
+static const struct option LONG_OPTS[] = {
+	{ "help",                   no_argument,       NULL, 'h' },
+	{ "usage",                  no_argument,       NULL, 'u' },
+	{ "full-page",              no_argument,       NULL, 'f' },
+	{ "single-screen",          no_argument,       NULL, '1' },
+	{ "previous",               required_argument, NULL, 'P' },
+	{ "next",                   required_argument, NULL, 'N' },
+	{ "no-presenter-area",      no_argument,       NULL, 'a' },
+	{ "no-thumbnails",          no_argument,       NULL, 't' },
+	{ "no-wall-clock",          no_argument,       NULL, 'w' },
+	{ "no-presentation-clock",  no_argument,       NULL, 'p' },
+	{ "no-slide-clock",         no_argument,       NULL, 's' },
+	{ NULL, 0, NULL, 0 }
+};
 
-RuntimeConfiguration::RuntimeConfiguration(int argc, char** argv)
+static void usage(const char* argv0)
 {
-  options_description generic("Generic options");
-  
-  generic.add_options()
-    ("help,h", "Print help message")
-    ("version,v", "Print version statement")
-    ;
-  
-  options_description global("Options affecting program behaviour");
-  global.add_options()
-    ("full-page,f", //value<bool>(&m_useFullPage)->default_value(false)->implicit_value(true),
-      "Display the full slide on both screens (useful for PDFs created by presentation software other than latex-beamer)")
-    ("prerender-previous-pages",
-     value<unsigned>(&m_prerenderPreviousPages)->default_value(3),
-     "Pre-render the preceding arg slides\n"
-     "NOTE: If you set this to zero, you might not get a thumbnail for the previous slide unless it was loaded already."
-    )
-    ("prerender-next-pages",
-     value<unsigned>(&m_prerenderNextPages)->default_value(10),
-     "Pre-render the next arg slides\n"
-     "NOTE: If you set this to zero, you might not get a thumbnail for the next slide unless it was loaded already."
-     )
-    ;
-  options_description secondscreen("Options affecting the second screen");
-  secondscreen.add_options()
-    ("use-second-screen,u",
-     value<bool>(&m_useSecondScreen)->default_value(true),
-     "Use the second screen. If you only have one monitor and just want to use this application as a fast, pre-caching PDF viewer"
-     " you might want to say 0 here.\n"
-     "NOTE: Whatever you say on -a, -t, -w, -s or -p doesn't matter if you set this to false.\n"
-     "NOTE: You might want to say -f if you set this to false."
-    )
-    ("presenter-area,a",
-     value<bool>(&m_showPresenterArea)->default_value(true),
-     "Shows or hides the complete \"presenter area\" on the second screen, giving you a full-screen note page.\n"
-     "NOTE: Whatever you say on -t, -w, -s or -p doesnt matter if you set this to false."
-    )
-    ("thumbnails,t",
-     value<bool>(&m_showThumbnails)->default_value(true),
-     "Show thumbnails of previous, current and next slide")
-    ("wall-clock,w",
-     value<bool>(&m_showWallClock)->default_value(true),
-     "Show the wall clock")
-    ("presentation-clock,p",
-     value<bool>(&m_showPresentationClock)->default_value(true),
-     "Show the presentation clock")
-    ("slide-clock,s",
-     value<bool>(&m_showSlideClock)->default_value(true),
-     "Show the slide clock")
-    ;
-  
-  options_description hidden("Hidden options");
-  hidden.add_options()
-    ("pdf-file", value< string >(&m_filePath), "PDF File to display")
-    ;
-  positional_options_description p;
-  p.add("pdf-file", 1);
-   
-  options_description help;
-  help.add(generic).add(global).add(secondscreen);
-  
-  
-  
-  options_description commandLineOptions;
-  commandLineOptions.add(help).add(hidden);
-  
-  options_description configFileOptions;
-  configFileOptions.add(global).add(secondscreen);
-  
-  /// TODO Parse config file
-  
-  variables_map vm;
-  store( command_line_parser(argc,argv).options(commandLineOptions).positional(p).run(), vm);
-  notify(vm);
-  
-  if ( vm.count("version") || vm.count("help") ) {
-    cout << "dspdfviewer version " << DSPDFVIEWER_VERSION << endl;
-    cout << "Written by Danny Edel" << endl;
-    cout << endl;
-    cout << "Copyright (C) 2012 Danny Edel." << endl
-	 << "This is free software; see the source for copying conditions.  There is NO" << endl
-	 << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE." << endl;
-    if ( vm.count("help")) {
-      cout << endl;
-      cout << "Usage: " << argv[0] << " [options] pdf-file" << endl;
-      cout << help << endl;
-    }
-    exit(1);
-  }
-  
-  if ( 0 == vm.count("pdf-file") ) {
-    throw std::runtime_error("You did not specify a PDF-File to display");
-  }
-  
-  m_useFullPage = ( 0 < vm.count("full-page") );
-  
-  /** Implied options */
-  if ( ! m_useSecondScreen ) {
-    /* If we dont use a second screen, there's no point in using the presenter area */
-    m_showPresenterArea = false;
-  }
-  if ( ! m_showPresenterArea ) {
-    /* If the presenter area is hidden, disable all clocks and the thumbnails */
-    m_showPresentationClock = false;
-    m_showWallClock = false;
-    m_showSlideClock = false;
-    /* This option will effectively disable rendering of thumbnails */
-    m_showThumbnails = false;
-  }
+	printf(
+	"usage: %s [OPTIONS] PDF\n"
+	"\n"
+	"  This program displays PDFs generated using beamer's \"show notes\n"
+	"  on second screen\" option. The primary monitor displays presenter\n"
+	"  notes, slide previews, and timers. The secondary monitor displays\n"
+	"  the presentation itself for the audience.\n"
+	"\n"
+	"  general options:\n"
+	"    -f --full-page               display a standard PDF on both monitors\n"
+	"    -1 --single-screen           only use a single screen\n"
+	"    -h --help                    this message\n"
+	"\n"
+	"  presenter options:\n"
+	"    -P --previous N              render N previous frames, default 3, 0 disables\n"
+	"    -N --next N                  render N upcoming frames, default 3, 0 disables\n"
+	"    -a --no-presenter-area       only render a full-screen note page on the presenter screen\n"
+	"    -t --no-thumnails            do not render thumbnails of previous, current, and next frame\n"
+	"    -w --no-wall-clock           disable the wall clock\n"
+	"    -p --no-presentation-clock   disable the presentation clock\n"
+	"    -s --no-slide-clock          disable the slide clock\n"
+	"\n"
+	"Version " DSPDFVIEWER_VERSION "\n"
+	"Copyright (C) 2013 Danny Edel\n"
+	"\n",
+		argv0
+	);
 }
 
-string RuntimeConfiguration::filePath() const
+RuntimeConfiguration::RuntimeConfiguration(int argc, char* argv[])
+{
+	int c, opt_index;
+
+	this->m_useFullPage = false;
+	this->m_useSecondScreen = true;
+	this->m_prerenderPreviousPages = 3;
+	this->m_prerenderNextPages = 3;
+	this->m_showPresenterArea = true;
+	this->m_showThumbnails = true;
+	this->m_showWallClock = true;
+	this->m_showPresentationClock = true;
+	this->m_showSlideClock = true;
+
+	while ((c = getopt_long(argc, argv, OPTSTRING, LONG_OPTS, &opt_index)) != -1) {
+
+		switch(c) {
+		case 'h':
+			usage(argv[0]);
+			exit(EXIT_SUCCESS);
+			break;
+		case 'f':
+			this->m_useFullPage = true;
+			break;
+		case '1':
+			this->m_useSecondScreen = false;
+			break;
+		case 'P':
+			this->m_prerenderPreviousPages = strtoul(optarg, NULL, 0);
+			break;
+		case 'N':
+			this->m_prerenderNextPages = strtoul(optarg, NULL, 0);
+			break;
+		case 'a':
+			this->m_showPresenterArea = false;
+			break;
+		case 't':
+			this->m_showThumbnails = false;
+			break;
+		case 'w':
+			this->m_showWallClock = false;
+			break;
+		case 'p':
+			this->m_showPresentationClock = false;
+			break;
+		case 's':
+			this->m_showSlideClock = false;
+			break;
+		default:
+			usage(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (argc - optind != 1) {
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	this->m_filePath = argv[optind];
+
+	if (!this->m_useSecondScreen)
+		this->m_showPresenterArea = false;
+
+	if (!this->m_showPresenterArea) {
+		this->m_showThumbnails = false;
+		this->m_showWallClock = false;
+		this->m_showPresentationClock = false;
+		this->m_showSlideClock = false;
+	}
+}
+
+std::string RuntimeConfiguration::filePath() const
 {
   return m_filePath;
 }
